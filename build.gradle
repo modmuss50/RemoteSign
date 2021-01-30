@@ -1,0 +1,67 @@
+plugins {
+    id 'java-gradle-plugin'
+    id 'groovy'
+    id "maven-publish"
+}
+
+def ENV = System.getenv()
+
+group = 'me.modmuss50'
+version = "0.1.0"
+
+sourceCompatibility = JavaVersion.VERSION_1_8
+targetCompatibility = JavaVersion.VERSION_1_8
+
+repositories {
+    mavenCentral()
+}
+
+tasks.withType(JavaCompile).configureEach {
+    it.options.encoding = "UTF-8"
+
+    if (JavaVersion.current().isJava9Compatible()) {
+        it.options.release = 8
+    }
+}
+
+dependencies {
+    implementation 'org.apache.httpcomponents:httpclient:4.5.12'
+    implementation 'org.apache.httpcomponents:httpmime:4.5.12'
+    implementation 'commons-io:commons-io:2.8.0'
+    implementation 'org.apache.commons:commons-lang3:3.11'
+}
+
+gradlePlugin {
+    plugins {
+        remotesign {
+            id = 'me.modmuss50.remotesign'
+            implementationClass = 'me.modmuss50.remotesign.RemoteSignPlugin'
+        }
+    }
+}
+
+publishing {
+    publications {
+        mavenJava(MavenPublication) {
+            groupId project.group
+            artifactId project.name
+            version project.version
+
+            from components.java
+        }
+    }
+
+    repositories {
+        mavenLocal()
+
+        if (ENV.MAVEN_URL) {
+            repositories.maven {
+                url ENV.MAVEN_URL
+                credentials {
+                    username ENV.MAVEN_USERNAME
+                    password ENV.MAVEN_PASSWORD
+                }
+            }
+        }
+    }
+}
