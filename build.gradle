@@ -7,7 +7,7 @@ plugins {
 def ENV = System.getenv()
 
 group = 'me.modmuss50'
-version = "0.1.0"
+version = "0.2.0"
 
 sourceCompatibility = JavaVersion.VERSION_1_8
 targetCompatibility = JavaVersion.VERSION_1_8
@@ -25,10 +25,15 @@ tasks.withType(JavaCompile).configureEach {
 }
 
 dependencies {
-    implementation 'org.apache.httpcomponents:httpclient:4.5.12'
-    implementation 'org.apache.httpcomponents:httpmime:4.5.12'
-    implementation 'commons-io:commons-io:2.8.0'
-    implementation 'org.apache.commons:commons-lang3:3.11'
+    implementation 'org.apache.httpcomponents:httpclient:4.5.13'
+    implementation 'org.apache.httpcomponents:httpmime:4.5.13'
+    implementation 'commons-io:commons-io:2.9.0'
+    implementation 'org.apache.commons:commons-lang3:3.12.0'
+
+    testImplementation 'io.javalin:javalin:3.13.7'
+    testImplementation('org.spockframework:spock-core:2.0-groovy-3.0') {
+        exclude module: 'groovy-all'
+    }
 }
 
 gradlePlugin {
@@ -38,6 +43,10 @@ gradlePlugin {
             implementationClass = 'me.modmuss50.remotesign.RemoteSignPlugin'
         }
     }
+}
+
+test {
+    useJUnitPlatform()
 }
 
 publishing {
