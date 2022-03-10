@@ -47,6 +47,15 @@ public abstract class RemoteSignExtension {
 		}
 	}
 
+	public TaskProvider<RemoteSignJarTask> sign(File inputFile, File outputFile, String name) {
+		return project.getTasks().register("sign" + StringUtils.capitalize(name), RemoteSignJarTask.class, remoteSignJarTask -> {
+			remoteSignJarTask.getInput().set(inputFile);
+			remoteSignJarTask.getOutput().set(outputFile);
+			remoteSignJarTask.getSignatureMethod().set(SignatureMethod.JARSIGN);
+			remoteSignJarTask.setGroup("sign");
+		});
+	}
+
 	private <T extends PublicationArtifact> void signArtifact(PublicationInternal<T> publication) {
 		String taskNamePrefix = "sign" + StringGroovyMethods.capitalize(publication.getName());
 
