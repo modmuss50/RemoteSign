@@ -12,7 +12,7 @@ import org.gradle.api.tasks.Internal;
 import org.gradle.api.tasks.TaskProvider;
 import org.gradle.api.tasks.bundling.AbstractArchiveTask;
 
-import java.io.*;
+import java.io.File;
 
 public abstract class RemoteSignExtension {
 	private final Project project;
@@ -66,6 +66,8 @@ public abstract class RemoteSignExtension {
 				remoteSignJarTask.getOutput().set(new File(artifact.getFile().getAbsolutePath() + ".asc"));
 				remoteSignJarTask.getSignatureMethod().set(SignatureMethod.PGPSIGN);
 				remoteSignJarTask.setGroup("sign");
+
+				remoteSignJarTask.dependsOn(artifact.getBuildDependencies());
 			});
 
 			T derivedArtifact = publication.addDerivedArtifact(artifact, new SignedArtifact(task));
