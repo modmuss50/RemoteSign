@@ -35,7 +35,7 @@ public abstract class RemoteSignJarTask extends DefaultTask {
 		SignatureProvider signatureProvider = extension.signatureProvider(getSignatureMethod().get());
 
 		try (OutputStream outputStream = new FileOutputStream(output)) {
-			signatureProvider.sign(new FileInputStream(getInput().getAsFile().get()), outputStream);
+			signatureProvider.sign(getInput().getAsFile().get(), outputStream);
 		} catch (IOException e) {
 			throw new RuntimeException("Failed to sign jar", e);
 		}

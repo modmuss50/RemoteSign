@@ -21,12 +21,17 @@ public abstract class RemoteSignExtension {
 	abstract Property<String> getPgpAuthKey();
 	abstract Property<String> getJarAuthKey();
 
+	// Enable to test locally without actually signing.
+	abstract Property<Boolean> getUseDummyForTesting();
+
 	public RemoteSignExtension(Project project) {
 		this.project = project;
 
 		getRequestUrl().finalizeValueOnRead();
 		getPgpAuthKey().finalizeValueOnRead();
 		getJarAuthKey().finalizeValueOnRead();
+
+		getUseDummyForTesting().convention(false).finalizeValueOnRead();
 	}
 
 	public void sign(Publication... publications) {
@@ -77,6 +82,10 @@ public abstract class RemoteSignExtension {
 
 	@Internal
 	public SignatureProvider signatureProvider(SignatureMethod method) {
+		if (getUseDummyForTesting().get()) {
+			return new DummySignatureProvider(project, method);
+		}
+
 		return new RemoteSignatureProvider(
 				HttpClients.createDefault(),
 				method, getRequestUrl().get(),
@@ -84,7 +93,7 @@ public abstract class RemoteSignExtension {
 		);
 	}
 
-	private class SignedArtifact implements PublicationInternal.DerivedArtifact {
+	private static class SignedArtifact implements PublicationInternal.DerivedArtifact {
 		private final TaskProvider<RemoteSignJarTask> task;
 
 		private SignedArtifact(TaskProvider<RemoteSignJarTask> task) {

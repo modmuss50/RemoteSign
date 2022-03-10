@@ -6,8 +6,8 @@ import org.apache.http.client.HttpClient;
 import org.apache.http.client.methods.HttpPost;
 import org.apache.http.entity.mime.MultipartEntityBuilder;
 
+import java.io.File;
 import java.io.IOException;
-import java.io.InputStream;
 import java.io.OutputStream;
 import java.util.Objects;
 
@@ -25,23 +25,22 @@ public class RemoteSignatureProvider implements SignatureProvider {
     }
 
     @Override
-    public void sign(InputStream inputStream, OutputStream outputStream) throws IOException {
-        HttpPost request = new HttpPost(serverUrl);
+    public void sign(File file, OutputStream outputStream) throws IOException {
+        final HttpPost request = new HttpPost(serverUrl);
+
         request.setEntity(
                 MultipartEntityBuilder.create()
                         .addTextBody("op", signatureMethod.name())
                         .addTextBody("key", authKey)
-                        .addBinaryBody("file", inputStream)
+                        .addBinaryBody("file", file)
                         .build()
         );
 
         HttpResponse response = httpClient.execute(request);
-        if (response.getStatusLine().getStatusCode() != 200) {
-            throw new IOException("Failed to get, return code: " + response.getStatusLine().getStatusCode());
-        }
 
-        // Need to close there here as we might be replacing that file with the output
-        inputStream.close();
+        if (response.getStatusLine().getStatusCode() != 200) {
+            throw new IOException("Failed to post, return code: " + response.getStatusLine().getStatusCode());
+        }
 
         int copied = IOUtils.copy(response.getEntity().getContent(), outputStream);
 
