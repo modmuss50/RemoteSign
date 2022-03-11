@@ -24,6 +24,8 @@ public abstract class RemoteSignExtension {
 	// Enable to test locally without actually signing.
 	abstract Property<Boolean> getUseDummyForTesting();
 
+	private File tempDir;
+
 	public RemoteSignExtension(Project project) {
 		this.project = project;
 
@@ -32,6 +34,8 @@ public abstract class RemoteSignExtension {
 		getJarAuthKey().finalizeValueOnRead();
 
 		getUseDummyForTesting().convention(false).finalizeValueOnRead();
+
+		tempDir = new File(project.getBuildDir(), "remotesign");
 	}
 
 	public void sign(Publication... publications) {
@@ -42,9 +46,10 @@ public abstract class RemoteSignExtension {
 
 	public void sign(AbstractArchiveTask... tasks) {
 		for (AbstractArchiveTask task : tasks) {
-			project.getTasks().register("sign" + StringUtils.capitalize(task.getName()), RemoteSignJarTask.class, remoteSignJarTask -> {
+			String name = "sign" + StringUtils.capitalize(task.getName());
+			project.getTasks().register(name, RemoteSignJarTask.class, remoteSignJarTask -> {
 				remoteSignJarTask.getInput().set(task.getArchiveFile());
-				remoteSignJarTask.getOutput().set(task.getArchiveFile()); // Replace the old file
+				remoteSignJarTask.getOutput().set(getOutputFile(name, task.getArchiveFile().get().getAsFile()));
 				remoteSignJarTask.getSignatureMethod().set(SignatureMethod.JARSIGN);
 				remoteSignJarTask.setGroup("sign");
 				remoteSignJarTask.dependsOn(task);
@@ -66,9 +71,11 @@ public abstract class RemoteSignExtension {
 
 		int i = 0;
 		for (T artifact : publication.getPublishableArtifacts()) {
-			TaskProvider<RemoteSignJarTask> task = project.getTasks().register(taskNamePrefix + i++, RemoteSignJarTask.class, remoteSignJarTask -> {
+			final String name = taskNamePrefix + i++;
+
+			TaskProvider<RemoteSignJarTask> task = project.getTasks().register(name, RemoteSignJarTask.class, remoteSignJarTask -> {
 				remoteSignJarTask.getInput().set(artifact.getFile());
-				remoteSignJarTask.getOutput().set(new File(artifact.getFile().getAbsolutePath() + ".asc"));
+				remoteSignJarTask.getOutput().set(getOutputFile(name, artifact.getFile(), "asc"));
 				remoteSignJarTask.getSignatureMethod().set(SignatureMethod.PGPSIGN);
 				remoteSignJarTask.setGroup("sign");
 
@@ -78,6 +85,14 @@ public abstract class RemoteSignExtension {
 			T derivedArtifact = publication.addDerivedArtifact(artifact, new SignedArtifact(task));
 			derivedArtifact.builtBy(task);
 		}
+	}
+
+	private File getOutputFile(String name, File input) {
+		return new File(tempDir, name + "/" + input.getName());
+	}
+
+	private File getOutputFile(String name, File input, String ext) {
+		return new File(tempDir, name + "/" + input.getName() + "." + ext);
 	}
 
 	@Internal

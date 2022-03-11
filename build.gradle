@@ -7,7 +7,7 @@ plugins {
 def ENV = System.getenv()
 
 group = 'me.modmuss50'
-version = "0.2.3"
+version = "0.2.4"
 
 sourceCompatibility = JavaVersion.VERSION_1_8
 targetCompatibility = JavaVersion.VERSION_1_8
