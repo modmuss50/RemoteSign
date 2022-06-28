@@ -5,6 +5,7 @@ import org.apache.http.HttpResponse;
 import org.apache.http.client.HttpClient;
 import org.apache.http.client.methods.HttpPost;
 import org.apache.http.entity.mime.MultipartEntityBuilder;
+import org.apache.http.impl.client.HttpClients;
 
 import java.io.File;
 import java.io.IOException;
@@ -12,13 +13,11 @@ import java.io.OutputStream;
 import java.util.Objects;
 
 public class RemoteSignatureProvider implements SignatureProvider {
-    private final HttpClient httpClient;
     private final SignatureMethod signatureMethod;
     private final String serverUrl;
     private final String authKey;
 
-    public RemoteSignatureProvider(HttpClient httpClient, SignatureMethod signatureMethod, String serverUrl, String authKey) {
-        this.httpClient = Objects.requireNonNull(httpClient);
+    public RemoteSignatureProvider(SignatureMethod signatureMethod, String serverUrl, String authKey) {
         this.signatureMethod = Objects.requireNonNull(signatureMethod);
         this.serverUrl = Objects.requireNonNull(serverUrl);
         this.authKey = Objects.requireNonNull(authKey);
@@ -26,6 +25,7 @@ public class RemoteSignatureProvider implements SignatureProvider {
 
     @Override
     public void sign(File file, OutputStream outputStream) throws IOException {
+		final HttpClient httpClient = HttpClients.createDefault();
         final HttpPost request = new HttpPost(serverUrl);
 
         request.setEntity(

@@ -24,7 +24,7 @@ public abstract class RemoteSignExtension {
 	// Enable to test locally without actually signing.
 	abstract Property<Boolean> getUseDummyForTesting();
 
-	private File tempDir;
+	private final File tempDir;
 
 	public RemoteSignExtension(Project project) {
 		this.project = project;
@@ -98,11 +98,10 @@ public abstract class RemoteSignExtension {
 	@Internal
 	public SignatureProvider signatureProvider(SignatureMethod method) {
 		if (getUseDummyForTesting().get()) {
-			return new DummySignatureProvider(project, method);
+			return new DummySignatureProvider(method);
 		}
 
 		return new RemoteSignatureProvider(
-				HttpClients.createDefault(),
 				method, getRequestUrl().get(),
 				method == SignatureMethod.PGPSIGN ? getPgpAuthKey().get() : getJarAuthKey().get()
 		);

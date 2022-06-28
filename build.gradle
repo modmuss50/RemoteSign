@@ -7,7 +7,7 @@ plugins {
 def ENV = System.getenv()
 
 group = 'me.modmuss50'
-version = "0.2.4"
+version = "0.3.0"
 
 sourceCompatibility = JavaVersion.VERSION_1_8
 targetCompatibility = JavaVersion.VERSION_1_8
@@ -27,11 +27,11 @@ tasks.withType(JavaCompile).configureEach {
 dependencies {
     implementation 'org.apache.httpcomponents:httpclient:4.5.13'
     implementation 'org.apache.httpcomponents:httpmime:4.5.13'
-    implementation 'commons-io:commons-io:2.9.0'
+    implementation 'commons-io:commons-io:2.11.0'
     implementation 'org.apache.commons:commons-lang3:3.12.0'
 
     testImplementation 'io.javalin:javalin:3.13.7'
-    testImplementation('org.spockframework:spock-core:2.0-groovy-3.0') {
+    testImplementation('org.spockframework:spock-core:2.1-groovy-3.0') {
         exclude module: 'groovy-all'
     }
 }
@@ -73,4 +73,27 @@ publishing {
             }
         }
     }
+}
+
+import org.gradle.util.GradleVersion
+
+/**
+ * Run this task to download the gradle sources next to the api jar, you may need to manually attach the sources jar
+ */
+task downloadGradleSources() {
+	doLast {
+		// Awful hack to find the gradle api location
+		def gradleApiFile = project.configurations.detachedConfiguration(dependencies.gradleApi()).files.stream()
+			.filter {
+				it.name.startsWith("gradle-api")
+			}.findFirst().orElseThrow()
+
+		def gradleApiSources = new File(gradleApiFile.absolutePath.replace(".jar", "-sources.jar"))
+		def url = "https://services.gradle.org/distributions/gradle-${GradleVersion.current().getVersion()}-src.zip"
+
+		gradleApiSources.delete()
+
+		println("Downloading (${url}) to (${gradleApiSources})")
+		gradleApiSources << new URL(url).newInputStream()
+	}
 }

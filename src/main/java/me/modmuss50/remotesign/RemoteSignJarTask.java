@@ -7,8 +7,18 @@ import org.gradle.api.tasks.Input;
 import org.gradle.api.tasks.InputFile;
 import org.gradle.api.tasks.OutputFile;
 import org.gradle.api.tasks.TaskAction;
+import org.gradle.workers.WorkAction;
+import org.gradle.workers.WorkParameters;
+import org.gradle.workers.WorkQueue;
+import org.gradle.workers.WorkerExecutor;
 
-import java.io.*;
+import javax.inject.Inject;
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.IOException;
+import java.io.OutputStream;
+import java.io.UncheckedIOException;
+import java.nio.file.Files;
 
 public abstract class RemoteSignJarTask extends DefaultTask {
 	@InputFile
@@ -20,30 +30,50 @@ public abstract class RemoteSignJarTask extends DefaultTask {
 	@OutputFile
 	abstract RegularFileProperty getOutput();
 
+	@Inject
+	protected abstract WorkerExecutor getWorkerExecutor();
+
 	public RemoteSignJarTask() {
 		getInput().finalizeValueOnRead();
+		getOutput().finalizeValueOnRead();
 		getSignatureMethod().finalizeValueOnRead();
 	}
 
 	@TaskAction
 	public void doTask() {
-		RemoteSignExtension extension = getProject().getExtensions().getByType(RemoteSignExtension.class);
+		final WorkQueue workQueue = getWorkerExecutor().noIsolation();
+		final RemoteSignExtension extension = getProject().getExtensions().getByType(RemoteSignExtension.class);
+		final SignatureProvider signatureProvider = extension.signatureProvider(getSignatureMethod().get());
 
-		getInput().finalizeValue();
-		File output = this.getOutput().get().getAsFile();
+		workQueue.submit(SignWorkAction.class, parameters -> {
+			parameters.getInputFile().set(getInput());
+			parameters.getOutputFile().set(getOutput());
+			parameters.getSignatureProvider().set(signatureProvider);
+		});
+	}
 
-		SignatureProvider signatureProvider = extension.signatureProvider(getSignatureMethod().get());
+	public interface SignWorkParameters extends WorkParameters {
+		RegularFileProperty getInputFile();
+		RegularFileProperty getOutputFile();
 
-		final File input = getInput().getAsFile().get();
+		Property<SignatureProvider> getSignatureProvider();
+	}
 
-		if (!input.exists() || input.length() == 0) {
-			throw new UncheckedIOException(new FileNotFoundException(input.getAbsolutePath() + " does not exist or is empty"));
-		}
+	public abstract static class SignWorkAction implements WorkAction<SignWorkParameters> {
+		@Override
+		public void execute() {
+			final File input = getParameters().getInputFile().getAsFile().get();
+			final File output = getParameters().getOutputFile().get().getAsFile();
 
-		try (OutputStream outputStream = new FileOutputStream(output)) {
-			signatureProvider.sign(input, outputStream);
-		} catch (IOException e) {
-			throw new RuntimeException("Failed to sign jar", e);
+			if (!input.exists() || input.length() == 0) {
+				throw new UncheckedIOException(new FileNotFoundException(input.getAbsolutePath() + " does not exist or is empty"));
+			}
+
+			try (OutputStream outputStream = Files.newOutputStream(output.toPath())) {
+				getParameters().getSignatureProvider().get().sign(input, outputStream);
+			} catch (IOException e) {
+				throw new RuntimeException("Failed to sign jar", e);
+			}
 		}
 	}
 }
