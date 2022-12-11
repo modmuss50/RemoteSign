@@ -46,10 +46,18 @@ class RemoteSignIntegrationSpec extends Specification {
             }
         """
 
-        def requested = false;
+        def requested = false
+		int requests = 0;
         given:
             javalin.post("/sign") {
-                requested = true
+				requests++
+				if (requests == 1) {
+					// Fail on the first request, it should retry
+					it.status(500)
+					return
+				}
+
+				requested = true
                 it.result("Success")
             }
         when:
@@ -62,6 +70,7 @@ class RemoteSignIntegrationSpec extends Specification {
             result.task(":build").outcome == SUCCESS
             result.task(":signJar").outcome == SUCCESS
             requested
+			requests == 2
     }
 
     def signPublication() {
