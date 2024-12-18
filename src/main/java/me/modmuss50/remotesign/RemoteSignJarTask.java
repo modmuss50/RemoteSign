@@ -1,6 +1,7 @@
 package me.modmuss50.remotesign;
 
 import org.gradle.api.DefaultTask;
+import org.gradle.api.Transformer;
 import org.gradle.api.file.RegularFileProperty;
 import org.gradle.api.provider.Property;
 import org.gradle.api.tasks.Input;
@@ -19,6 +20,7 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.io.UncheckedIOException;
 import java.nio.file.Files;
+import java.util.concurrent.Callable;
 
 public abstract class RemoteSignJarTask extends DefaultTask {
 	@InputFile
@@ -26,6 +28,9 @@ public abstract class RemoteSignJarTask extends DefaultTask {
 
 	@Input
 	abstract Property<SignatureMethod> getSignatureMethod();
+
+	@Input
+	protected abstract Property<SignatureProvider> getSignatureProvider();
 
 	@OutputFile
 	abstract RegularFileProperty getOutput();
@@ -37,18 +42,20 @@ public abstract class RemoteSignJarTask extends DefaultTask {
 		getInput().finalizeValueOnRead();
 		getOutput().finalizeValueOnRead();
 		getSignatureMethod().finalizeValueOnRead();
+		getSignatureProvider().set(getSignatureMethod().map(signatureMethod -> {
+            final RemoteSignExtension extension = getProject().getExtensions().getByType(RemoteSignExtension.class);
+            return extension.signatureProvider(signatureMethod);
+        }));
 	}
 
 	@TaskAction
 	public void doTask() {
 		final WorkQueue workQueue = getWorkerExecutor().noIsolation();
-		final RemoteSignExtension extension = getProject().getExtensions().getByType(RemoteSignExtension.class);
-		final SignatureProvider signatureProvider = extension.signatureProvider(getSignatureMethod().get());
 
 		workQueue.submit(SignWorkAction.class, parameters -> {
 			parameters.getInputFile().set(getInput());
 			parameters.getOutputFile().set(getOutput());
-			parameters.getSignatureProvider().set(signatureProvider);
+			parameters.getSignatureProvider().set(getSignatureProvider().get());
 		});
 	}
 

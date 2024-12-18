@@ -108,7 +108,7 @@ class RemoteSignIntegrationSpec extends Specification {
         when:
         def result = GradleRunner.create()
                 .withProjectDir(testProjectDir)
-                .withArguments('build', 'publish', '--stacktrace')
+                .withArguments('build', 'publish', '--stacktrace', '--configuration-cache')
                 .withPluginClasspath()
                 .build()
         then:
